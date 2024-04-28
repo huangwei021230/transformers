@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import torch
+from torch import nn 
 
 # TOOD: The code is reused from the clip benchmark, we need to refactor the code to make it as a dependened package
 def sparsify_matrix_for_FC_layer(hidden_states, sparsity_percentage, dim_of_neurals, enable_random_sparsity_selection=False):
@@ -36,3 +37,24 @@ def mask_attention_result(hidden_states: torch.Tensor, sparsity_percentage, num_
         _head_mask = _head_mask.unsqueeze(-1).unsqueeze(-1).expand_as(hidden_states)
     
     return hidden_states * _head_mask
+
+def find_layers(module, layers=[nn.Linear], name=''):
+    """
+    Recursively find the layers of a certain type in a module.
+
+    Args:
+        module (nn.Module): PyTorch module.
+        layers (list): List of layer types to find.
+        name (str): Name of the module.
+
+    Returns:
+        dict: Dictionary of layers of the given type(s) within the module.
+    """
+    if type(module) in layers:
+        return {name: module}
+    res = {}
+    for name1, child in module.named_children():
+        res.update(find_layers(
+            child, layers=layers, name=name + '.' + name1 if name != '' else name1
+        ))
+    return res
