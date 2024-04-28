@@ -99,7 +99,7 @@ from .utils.import_utils import (
     is_torchdynamo_compiling,
 )
 from .utils.quantization_config import BitsAndBytesConfig, QuantizationMethod
-
+from transformers.prune import prune_metadata
 
 XLA_USE_BF16 = os.environ.get("XLA_USE_BF16", "0").upper()
 XLA_DOWNCAST_BF16 = os.environ.get("XLA_DOWNCAST_BF16", "0").upper()
@@ -1318,6 +1318,9 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
         # `InstructBlipForConditionalGeneration` can dynamically update it without modifying the class attribute
         # when a different component (e.g. language_model) is used.
         self._keep_in_fp32_modules = copy.copy(self.__class__._keep_in_fp32_modules)
+        
+        if config.record_weight_wise_activation:
+            self.prune_metadata = prune_metadata.PruneMetadata()
 
     def post_init(self):
         """

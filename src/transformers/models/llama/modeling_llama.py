@@ -1135,8 +1135,9 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         self.model = LlamaModel(config)
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
-        self.prune_metadata = PruneMetadata()
-        self.prune_metadata.register_hooks_for_layers(self.model.layers)
+        if config.record_weight_wise_activation:
+            assert self.prune_metadata != None
+            self.prune_metadata.register_hooks_for_layers(self.model.layers)
 
         # Initialize weights and apply final processing
         self.post_init()
