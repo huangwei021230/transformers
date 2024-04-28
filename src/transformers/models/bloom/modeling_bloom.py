@@ -36,7 +36,7 @@ from ...modeling_outputs import (
 from ...modeling_utils import PreTrainedModel
 from ...utils import logging
 from .configuration_bloom import BloomConfig
-
+from transformers.utils.sparsity_utils import accumulate_input_power_sum
 
 logger = logging.get_logger(__name__)
 
@@ -343,6 +343,7 @@ class BloomMLP(nn.Module):
         self.gelu_impl = BloomGelu()
         self.dense_4h_to_h = nn.Linear(4 * hidden_size, hidden_size)
         self.hidden_dropout = config.hidden_dropout
+        self.record_weight_wise_activation = config.record_weight_wise_activation
 
     def forward(self, hidden_states: torch.Tensor, residual: torch.Tensor) -> torch.Tensor:
         hidden_states = self.gelu_impl(self.dense_h_to_4h(hidden_states))

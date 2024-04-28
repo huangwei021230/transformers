@@ -373,6 +373,8 @@ class PretrainedConfig(PushToHubMixin):
             except AttributeError as err:
                 logger.error(f"Can't set {key} with value {value} for {self}")
                 raise err
+            
+        self.record_weight_wise_activation = kwargs.pop("record_weight_wise_activation", False)
 
     @property
     def name_or_path(self) -> str:

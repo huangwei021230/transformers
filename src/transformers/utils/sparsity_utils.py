@@ -36,3 +36,13 @@ def mask_attention_result(hidden_states: torch.Tensor, sparsity_percentage, num_
         _head_mask = _head_mask.unsqueeze(-1).unsqueeze(-1).expand_as(hidden_states)
     
     return hidden_states * _head_mask
+
+def wanda_activation_score(hidden_states: torch.Tensor, X: torch.Tensor):
+    return hidden_states.abs() * X.norm(p=2, dim=0)
+
+def accumulate_input_power_sum(accumulator: torch.Tensor, X: torch.Tensor):
+    input_power_sum = X.pow(2).sum(dim=0)
+    if accumulator == None:
+        return input_power_sum
+    else:
+        return torch.cat((accumulator.unsqueeze(0), input_power_sum.unsqueeze(0)), dim=0).sum(dim=0)
