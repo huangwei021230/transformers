@@ -13,24 +13,25 @@ class WrapperLayer:
         self.rows = layer.weight.data.shape[0]
         self.columns = layer.weight.data.shape[1]
 
+        # number of features of the input=self.columns
         self.scaler_row = torch.zeros((self.columns), device=self.dev)
         self.nsamples = 0
 
         self.layer_id = layer_id 
         self.layer_name = layer_name
 
-    def add_batch(self, inp, out):
-        if len(inp.shape) == 2:
-            inp = inp.unsqueeze(0)
-        tmp = inp.shape[0]
+    def add_batch(self, input_X: torch.Tensor, output_X: torch.Tensor):
+        if len(input_X.shape) == 2:
+            input_X = input_X.unsqueeze(0)
+        batch_size = input_X.shape[0]
         if isinstance(self.layer, nn.Linear):
-            if len(inp.shape) == 3:
-                inp = inp.reshape((-1, inp.shape[-1]))
-            inp = inp.t()
+            if len(input_X.shape) == 3:
+                input_X = input_X.reshape((-1, input_X.shape[-1]))
+            input_X = input_X.t()
 
-        self.scaler_row *= self.nsamples / (self.nsamples+tmp)
-        self.nsamples += tmp
+        self.scaler_row *= self.nsamples / (self.nsamples + batch_size)
+        self.nsamples += batch_size
         
-        inp = inp.type(torch.float32)
-        self.scaler_row += torch.norm(inp, p=2, dim=1) ** 2  / self.nsamples
+        input_X = input_X.type(torch.float32)
+        self.scaler_row += torch.norm(input_X, p=2, dim=1) ** 2  / self.nsamples
         # print('[DEBUG]layer_id:{}, layer_name:{}, nsamples:{}'.format(self.layer_id, self.layer_name, self.nsamples))
