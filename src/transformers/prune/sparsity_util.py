@@ -1,6 +1,7 @@
 import json
 import numpy as np
 import torch
+from torch import nn 
 
 # TOOD: The code is reused from the clip benchmark, we need to refactor the code to make it as a dependened package
 def sparsify_matrix_for_FC_layer(hidden_states, sparsity_percentage, dim_of_neurals, enable_random_sparsity_selection=False):
@@ -37,12 +38,23 @@ def mask_attention_result(hidden_states: torch.Tensor, sparsity_percentage, num_
     
     return hidden_states * _head_mask
 
-def wanda_activation_score(hidden_states: torch.Tensor, X: torch.Tensor):
-    return hidden_states.abs() * X.norm(p=2, dim=0)
+def find_layers(module, layers=[nn.Linear], name=''):
+    """
+    Recursively find the layers of a certain type in a module.
 
-def accumulate_input_power_sum(accumulator: torch.Tensor, X: torch.Tensor):
-    input_power_sum = X.pow(2).sum(dim=0)
-    if accumulator == None:
-        return input_power_sum
-    else:
-        return torch.cat((accumulator.unsqueeze(0), input_power_sum.unsqueeze(0)), dim=0).sum(dim=0)
+    Args:
+        module (nn.Module): PyTorch module.
+        layers (list): List of layer types to find.
+        name (str): Name of the module.
+
+    Returns:
+        dict: Dictionary of layers of the given type(s) within the module.
+    """
+    if type(module) in layers:
+        return {name: module}
+    res = {}
+    for name1, child in module.named_children():
+        res.update(find_layers(
+            child, layers=layers, name=name + '.' + name1 if name != '' else name1
+        ))
+    return res
