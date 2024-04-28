@@ -595,6 +595,9 @@ class BloomModel(BloomPreTrainedModel):
         # Initialize weights and apply final processing
         self.post_init()
 
+        if config.record_weight_wise_activation:
+            self.prune_metadata.register_hooks_for_layers(self.h)
+
     def build_alibi_tensor(self, attention_mask: torch.Tensor, num_heads: int, dtype: torch.dtype) -> torch.Tensor:
         return build_alibi_tensor(attention_mask, num_heads, dtype)
 
