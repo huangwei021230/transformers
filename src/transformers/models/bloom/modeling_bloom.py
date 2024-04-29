@@ -17,6 +17,7 @@
 import math
 import warnings
 from typing import Optional, Tuple, Union
+from transformers.prune import prune_metadata
 
 import torch
 import torch.utils.checkpoint
@@ -439,6 +440,9 @@ class BloomPreTrainedModel(PreTrainedModel):
     supports_gradient_checkpointing = True
     _no_split_modules = ["BloomBlock"]
     _skip_keys_device_placement = "past_key_values"
+
+    def initialize_prune_metadata(self):
+        self.prune_metadata = prune_metadata.BloomPruneMetadata(self)
 
     def __init__(self, *inputs, **kwargs):
         super().__init__(*inputs, **kwargs)
