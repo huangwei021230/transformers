@@ -932,10 +932,6 @@ class LlamaModel(LlamaPreTrainedModel):
 
         # Initialize weights and apply final processing
         self.post_init()
-        self.hidden_act_func = ACT2FN[config.hidden_act]
-        
-    def initialize_prune_metadata(self, output_path):
-        self.prune_metadata = prune_metadata.LlamaPruneMetadata(self, self.hidden_act_func, output_path)
 
     def get_input_embeddings(self):
         return self.embed_tokens
@@ -1140,6 +1136,8 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         self.model = LlamaModel(config)
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+        # The output path is set before initialization function is called
+        self.prune_metadata = prune_metadata.LlamaPruneMetadata(self, ACT2FN[config.hidden_act], self.prune_metadata.output_path)
         if config.record_weight_wise_activation:
             assert self.prune_metadata != None
             self.prune_metadata.register_hooks_for_layers(self.model.layers)
