@@ -1,4 +1,5 @@
 from .wrapper_layer import WrapperLayer
+from .wrapper_layer import BloomWrapperLayer
 from .sparsity_util import find_layers
 import torch
 
@@ -16,7 +17,7 @@ class PruneMetadata:
             # Wrapper layer is used to record the statistics of each layer
             wrapper_layers = {}
             for name in subset:
-                wrapper_layers[name] = WrapperLayer(subset[name], layer_id=id, layer_name=name)
+                wrapper_layers[name] = self.create_wrapper_layer(subset[name], layer_id=id, layer_name=name)
             self.all_wrapper_layers.append(wrapper_layers)
             
             def add_batch(layer_id, name, wrapper_layer):
@@ -28,9 +29,12 @@ class PruneMetadata:
             for name, wrapper_layer in wrapper_layers.items():
                 self.handles.append(subset[name].register_forward_hook(add_batch(id, name, wrapper_layer)))
     
-    def find_instrument_layers(layer):
+    def find_instrument_layers(self, layer):
         return find_layers(layer)
     
+    def create_wrapper_layer(self, layer, layer_id, layer_name):
+        return WrapperLayer(layer, layer_id, layer_name)
+
     def print(self, save_weight_importance=True):
         print("PruneMetadata")
         print("all_wrapper_layers:")
@@ -50,6 +54,9 @@ class PruneMetadata:
                     torch.save(weight_importance, f"/mnt/ssd/yicw/modelbase/llm-benchmark/llama3-benchmark/weight_importance/" + filename)
         
 # TODO: implement this
-class NonReLUPruneMetadata(PruneMetadata):
+class BloomPruneMetadata(PruneMetadata):
     def __init__(self, model):
-        super(self, model)
+        super().__init__(model)
+        
+    def create_wrapper_layer(self, layer, layer_id, layer_name):
+        return BloomWrapperLayer(layer, layer_id, layer_name)

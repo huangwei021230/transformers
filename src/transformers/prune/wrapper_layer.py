@@ -8,6 +8,7 @@ class WrapperLayer:
     """
 
     def __init__(self, layer, layer_id=0, layer_name="none"):
+        assert layer != None
         self.layer = layer
         self.dev = self.layer.weight.device
         self.rows = layer.weight.data.shape[0]
@@ -19,6 +20,7 @@ class WrapperLayer:
 
         self.layer_id = layer_id 
         self.layer_name = layer_name
+        self.layer_activation = None
 
     def add_batch(self, input_X: torch.Tensor, output_X: torch.Tensor):
         if self.scaler_row is None:
@@ -41,4 +43,14 @@ class WrapperLayer:
         # print('[DEBUG]layer_id:{}, layer_name:{}, nsamples:{}'.format(self.layer_id, self.layer_name, self.nsamples))
     
     def get_weight_importance(self):
-        return torch.abs(self.layer.weight.data) * torch.sqrt(self.scaler_row.reshape((1,-1)))
+        result = torch.abs(self.layer.weight.data) * torch.sqrt(self.scaler_row.reshape((1,-1)))
+        if self.layer_activation != None:
+            return self.layer_activation(result)
+        return result
+
+class BloomWrapperLayer(WrapperLayer):
+    def __init__(self, layer, layer_id=0, layer_name="none"):
+        super().__init__(layer, layer_id, layer_name)
+        from transformers.models.bloom.modeling_bloom import BloomGelu
+        if layer_name == 'mlp.dense_h_to_4h':
+            self.layer_activation = BloomGelu()

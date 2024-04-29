@@ -1320,7 +1320,11 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
         self._keep_in_fp32_modules = copy.copy(self.__class__._keep_in_fp32_modules)
         
         if config.record_weight_wise_activation:
-            self.prune_metadata = prune_metadata.PruneMetadata(self)
+            self.initialize_prune_metadata()
+
+    # NOTICE: Default metadata dose not consider activation function, overwrite with model-specific pruning metadata (e.g., to include activation function information)
+    def initialize_prune_metadata(self):
+        self.prune_metadata = prune_metadata.PruneMetadata(self)
 
     def post_init(self):
         """
