@@ -1,5 +1,6 @@
 from .wrapper_layer import WrapperLayer
 from .sparsity_util import find_layers
+import torch
 
 #PruneMetadata is used to store the statistics during the forward pass of the model.
 class PruneMetadata:
@@ -30,7 +31,7 @@ class PruneMetadata:
     def find_instrument_layers(layer):
         return find_layers(layer)
     
-    def print(self):
+    def print(self, save_weight_importance=True):
         print("PruneMetadata")
         print("all_wrapper_layers:")
         for id, wrapper_layers in enumerate(self.all_wrapper_layers):
@@ -40,9 +41,13 @@ class PruneMetadata:
                 print("    rows:", wrapper_layer.rows)
                 print("    columns:", wrapper_layer.columns)
                 print("    nsamples:", wrapper_layer.nsamples)
-                print("    scaler_row:", wrapper_layer.scaler_row)
-                print('    layer_activation:', wrapper_layer.compute_layer_activation())
-        print('hook_size:', len(self.handles))
+                print("    scaler_row.shape:", wrapper_layer.scaler_row.shape)
+                weight_importance = wrapper_layer.get_weight_importance()
+                print("    weight_importance.shape:", weight_importance.shape)
+                if save_weight_importance:
+                    #TODO(YCW): make the path configurable
+                    filename = f"{id}_{name}.pt"
+                    torch.save(weight_importance, f"/mnt/ssd/yicw/modelbase/llm-benchmark/llama3-benchmark/weight_importance/" + filename)
         
 # TODO: implement this
 class NonReLUPruneMetadata(PruneMetadata):

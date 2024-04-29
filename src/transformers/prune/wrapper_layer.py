@@ -14,13 +14,18 @@ class WrapperLayer:
         self.columns = layer.weight.data.shape[1]
 
         # number of features of the input=self.columns
-        self.scaler_row = torch.zeros((self.columns), device=self.dev)
+        self.scaler_row = None
         self.nsamples = 0
 
         self.layer_id = layer_id 
         self.layer_name = layer_name
 
     def add_batch(self, input_X: torch.Tensor, output_X: torch.Tensor):
+        if self.scaler_row is None:
+            # keep the layer weight and scale_row always in same device
+            self.dev = self.layer.weight.device
+            self.scaler_row = torch.zeros((self.columns), device=self.dev)
+            
         if len(input_X.shape) == 2:
             input_X = input_X.unsqueeze(0)
         batch_size = input_X.shape[0]
@@ -30,8 +35,10 @@ class WrapperLayer:
             input_X = input_X.t()
 
         self.scaler_row *= self.nsamples / (self.nsamples + batch_size)
-        self.nsamples += batch_size
-        
+        self.nsamples += batch_size        
         input_X = input_X.type(torch.float32)
         self.scaler_row += torch.norm(input_X, p=2, dim=1) ** 2  / self.nsamples
         # print('[DEBUG]layer_id:{}, layer_name:{}, nsamples:{}'.format(self.layer_id, self.layer_name, self.nsamples))
+    
+    def get_weight_importance(self):
+        return torch.abs(self.layer.weight.data) * torch.sqrt(self.scaler_row.reshape((1,-1)))
