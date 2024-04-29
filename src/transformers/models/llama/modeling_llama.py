@@ -934,8 +934,8 @@ class LlamaModel(LlamaPreTrainedModel):
         self.post_init()
         self.hidden_act_func = ACT2FN[config.hidden_act]
         
-    def initialize_prune_metadata(self):
-        self.prune_metadata = prune_metadata.LlamaPruneMetadata(self, self.hidden_act_func)
+    def initialize_prune_metadata(self, output_path):
+        self.prune_metadata = prune_metadata.LlamaPruneMetadata(self, self.hidden_act_func, output_path)
 
     def get_input_embeddings(self):
         return self.embed_tokens

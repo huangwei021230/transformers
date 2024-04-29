@@ -441,8 +441,8 @@ class BloomPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["BloomBlock"]
     _skip_keys_device_placement = "past_key_values"
 
-    def initialize_prune_metadata(self):
-        self.prune_metadata = prune_metadata.BloomPruneMetadata(self)
+    def initialize_prune_metadata(self, output_path):
+        self.prune_metadata = prune_metadata.BloomPruneMetadata(self, output_path)
 
     def __init__(self, *inputs, **kwargs):
         super().__init__(*inputs, **kwargs)

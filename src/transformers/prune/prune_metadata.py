@@ -2,6 +2,7 @@ from .wrapper_layer import WrapperLayer
 from .wrapper_layer import BloomWrapperLayer, LlamaWrapperLayer
 from .sparsity_util import find_layers
 import torch
+import os
 
 #PruneMetadata is used to store the statistics during the forward pass of the model.
 class PruneMetadata:
@@ -50,21 +51,23 @@ class PruneMetadata:
                 weight_importance = wrapper_layer.get_weight_importance()
                 print("    weight_importance.shape:", weight_importance.shape)
                 if self.output_path is not None:
-                    #TODO(YCW): make the path configurable
+                    if not os.path.exists(self.output_path):
+                        os.makedirs(self.output_path)
                     filename = f"{id}_{name}.pt"
-                    torch.save(weight_importance, self.output_path + '/' + filename)
+                    torch.save(weight_importance, os.path.join(self.output_path, filename))
         
 # TODO: implement this
 class BloomPruneMetadata(PruneMetadata):
-    def __init__(self, model):
-        super().__init__(model)
+    def __init__(self, model, output_path):
+        super().__init__(model, output_path)
+        self.output_path = output_path
         
     def create_wrapper_layer(self, layer, layer_id, layer_name):
         return BloomWrapperLayer(layer, layer_id, layer_name)
     
 class LlamaPruneMetadata(PruneMetadata):
-    def __init__(self, model, activation_func):
-        super().__init__(model)
+    def __init__(self, model, activation_func, output_path):
+        super().__init__(model, output_path)
         self.activation_func = activation_func
         
     def create_wrapper_layer(self, layer, layer_id, layer_name):
