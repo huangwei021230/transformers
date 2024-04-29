@@ -22,6 +22,7 @@ from torch import nn
 from torch.nn import BCEWithLogitsLoss, CrossEntropyLoss, MSELoss
 
 from ...activations import ACT2FN
+from ...prune import PruneMetadata
 from ...modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 from ...modeling_outputs import (
     BaseModelOutputWithPast,
@@ -1000,6 +1001,10 @@ class OPTForCausalLM(OPTPreTrainedModel):
 
         # the lm_head weight is automatically tied to the embed tokens weight
         self.lm_head = nn.Linear(config.word_embed_proj_dim, config.vocab_size, bias=False)
+
+        if config.record_weight_wise_activation:
+            assert self.prune_metadata != None
+            self.prune_metadata.register_hooks_for_layers(self.model.decoder.layers)
 
         # Initialize weights and apply final processing
         self.post_init()
