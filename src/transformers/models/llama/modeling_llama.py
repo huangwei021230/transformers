@@ -23,6 +23,7 @@ import math
 import warnings
 from typing import List, Optional, Tuple, Union
 
+from transformers.prune import prune_metadata
 import torch
 import torch.nn.functional as F
 import torch.utils.checkpoint
@@ -931,6 +932,10 @@ class LlamaModel(LlamaPreTrainedModel):
 
         # Initialize weights and apply final processing
         self.post_init()
+        self.hidden_act_func = ACT2FN[config.hidden_act]
+        
+    def initialize_prune_metadata(self):
+        self.prune_metadata = prune_metadata.LlamaPruneMetadata(self, self.hidden_act_func)
 
     def get_input_embeddings(self):
         return self.embed_tokens

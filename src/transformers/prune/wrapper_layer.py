@@ -54,3 +54,10 @@ class BloomWrapperLayer(WrapperLayer):
         from transformers.models.bloom.modeling_bloom import BloomGelu
         if layer_name == 'mlp.dense_h_to_4h':
             self.layer_activation = BloomGelu()
+
+class LlamaWrapperLayer(WrapperLayer):
+    def __init__(self, layer, layer_id=0, layer_name="none", activation_func=None):
+        super().__init__(layer, layer_id, layer_name)
+        # TODO: inject activation function for specific layers
+        if layer_name == 'mlp.gate_proj':
+            self.layer_activation = activation_func
