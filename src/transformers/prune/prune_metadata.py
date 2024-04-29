@@ -4,14 +4,15 @@ import torch
 
 #PruneMetadata is used to store the statistics during the forward pass of the model.
 class PruneMetadata:
-    def __init__(self, output_path=None):
+    def __init__(self, model, output_path=None):
         self.all_wrapper_layers = []
         self.handles = []
+        self.model = model
         self.output_path = output_path
-    
+
     def register_hooks_for_layers(self, layers):
         for id, layer in enumerate(layers):
-            subset = find_layers(layer)
+            subset = self.find_instrument_layers(layer)
         
             # Wrapper layer is used to record the statistics of each layer
             wrapper_layers = {}
@@ -27,8 +28,11 @@ class PruneMetadata:
                 return tmp
             for name, wrapper_layer in wrapper_layers.items():
                 self.handles.append(subset[name].register_forward_hook(add_batch(id, name, wrapper_layer)))
-        
-    def print(self):
+ 
+    def find_instrument_layers(layer):
+        return find_layers(layer)
+    
+    def print(self, save_weight_importance=True):
         print("PruneMetadata")
         print("all_wrapper_layers:")
         for id, wrapper_layers in enumerate(self.all_wrapper_layers):
@@ -46,4 +50,7 @@ class PruneMetadata:
                     filename = f"{id}_{name}.pt"
                     torch.save(weight_importance, output_path + '/' + filename)
         
-        print('hook_size:', len(self.handles))
+# TODO: implement this
+class NonReLUPruneMetadata(PruneMetadata):
+    def __init__(self, model):
+        super(self, model)
