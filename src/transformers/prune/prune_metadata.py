@@ -25,7 +25,7 @@ class PruneMetadata:
                 return tmp
             for name, wrapper_layer in wrapper_layers.items():
                 self.handles.append(subset[name].register_forward_hook(add_batch(id, name, wrapper_layer)))
-    
+                           
     def print(self):
         print("PruneMetadata")
         print("all_wrapper_layers:")
@@ -37,5 +37,19 @@ class PruneMetadata:
                 print("    columns:", wrapper_layer.columns)
                 print("    nsamples:", wrapper_layer.nsamples)
                 print("    scaler_row:", wrapper_layer.scaler_row)
-        
+                print("    scaler_row size:", wrapper_layer.scaler_row.shape)
+                
         print('hook_size:', len(self.handles))
+
+
+    def calculate_avg_activation_matrix(self):
+        print("calculate_scaler_matrix")
+        print("all_wrapper_layers:")
+        for id, wrapper_layer in enumerate(self.all_wrapper_layers):
+            print(" layer_id:", id)
+            for name, wrapper_layer in items:
+                weight_matrix = wrapper_layer.layer.weight.data
+                assert weight_matrix.shape[0] == wrapper_layer.scaler_row.shape[0]
+                avg_activation_matrix = weight_matrix * wrapper_layer.scaler_row    
+                print("  layer_name:", name)
+                print("    avg_activation_matrix:", avg_activation_matrix)
