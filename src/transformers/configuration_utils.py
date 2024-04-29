@@ -375,6 +375,7 @@ class PretrainedConfig(PushToHubMixin):
                 raise err
             
         self.record_weight_wise_activation = kwargs.pop("record_weight_wise_activation", False)
+        self.output_path = kwargs.pop("output_path", None)
 
     @property
     def name_or_path(self) -> str:
