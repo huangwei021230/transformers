@@ -4,9 +4,10 @@ import torch
 
 #PruneMetadata is used to store the statistics during the forward pass of the model.
 class PruneMetadata:
-    def __init__(self):
+    def __init__(self, output_path=None):
         self.all_wrapper_layers = []
         self.handles = []
+        self.output_path = output_path
     
     def register_hooks_for_layers(self, layers):
         for id, layer in enumerate(layers):
@@ -27,7 +28,7 @@ class PruneMetadata:
             for name, wrapper_layer in wrapper_layers.items():
                 self.handles.append(subset[name].register_forward_hook(add_batch(id, name, wrapper_layer)))
         
-    def print(self, save_weight_importance=True):
+    def print(self):
         print("PruneMetadata")
         print("all_wrapper_layers:")
         for id, wrapper_layers in enumerate(self.all_wrapper_layers):
@@ -40,9 +41,9 @@ class PruneMetadata:
                 print("    scaler_row.shape:", wrapper_layer.scaler_row.shape)
                 weight_importance = wrapper_layer.get_weight_importance()
                 print("    weight_importance.shape:", weight_importance.shape)
-                if save_weight_importance:
+                if output_path is not None:
                     #TODO(YCW): make the path configurable
                     filename = f"{id}_{name}.pt"
-                    torch.save(weight_importance, f"/mnt/ssd/yicw/modelbase/llm-benchmark/llama3-benchmark/weight_importance/" + filename)
+                    torch.save(weight_importance, output_path + '/' + filename)
         
         print('hook_size:', len(self.handles))
