@@ -49,10 +49,10 @@ class PruneMetadata:
                 print("    scaler_row.shape:", wrapper_layer.scaler_row.shape)
                 weight_importance = wrapper_layer.get_weight_importance()
                 print("    weight_importance.shape:", weight_importance.shape)
-                if output_path is not None:
+                if self.output_path is not None:
                     #TODO(YCW): make the path configurable
                     filename = f"{id}_{name}.pt"
-                    torch.save(weight_importance, output_path + '/' + filename)
+                    torch.save(weight_importance, self.output_path + '/' + filename)
         
 # TODO: implement this
 class BloomPruneMetadata(PruneMetadata):
