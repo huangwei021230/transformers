@@ -3,13 +3,14 @@ from .sparsity_util import find_layers
 
 #PruneMetadata is used to store the statistics during the forward pass of the model.
 class PruneMetadata:
-    def __init__(self):
+    def __init__(self, model):
         self.all_wrapper_layers = []
         self.handles = []
+        self.model = model
     
     def register_hooks_for_layers(self, layers):
         for id, layer in enumerate(layers):
-            subset = find_layers(layer)
+            subset = self.find_instrument_layers(layer)
         
             # Wrapper layer is used to record the statistics of each layer
             wrapper_layers = {}
@@ -26,6 +27,9 @@ class PruneMetadata:
             for name, wrapper_layer in wrapper_layers.items():
                 self.handles.append(subset[name].register_forward_hook(add_batch(id, name, wrapper_layer)))
     
+    def find_instrument_layers(layer):
+        return find_layers(layer)
+    
     def print(self):
         print("PruneMetadata")
         print("all_wrapper_layers:")
@@ -37,5 +41,10 @@ class PruneMetadata:
                 print("    columns:", wrapper_layer.columns)
                 print("    nsamples:", wrapper_layer.nsamples)
                 print("    scaler_row:", wrapper_layer.scaler_row)
-        
+                print('    layer_activation:', wrapper_layer.compute_layer_activation())
         print('hook_size:', len(self.handles))
+        
+# TODO: implement this
+class NonReLUPruneMetadata(PruneMetadata):
+    def __init__(self, model):
+        super(self, model)
