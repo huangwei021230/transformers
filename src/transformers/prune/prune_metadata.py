@@ -1,6 +1,6 @@
 from .wrapper_layer import WrapperLayer
 from .sparsity_util import find_layers
-
+import torch
 #PruneMetadata is used to store the statistics during the forward pass of the model.
 class PruneMetadata:
     def __init__(self):
@@ -38,18 +38,11 @@ class PruneMetadata:
                 print("    nsamples:", wrapper_layer.nsamples)
                 print("    scaler_row:", wrapper_layer.scaler_row)
                 print("    scaler_row size:", wrapper_layer.scaler_row.shape)
-                
+
         print('hook_size:', len(self.handles))
 
 
-    def calculate_avg_activation_matrix(self):
-        print("calculate_scaler_matrix")
-        print("all_wrapper_layers:")
-        for id, wrapper_layer in enumerate(self.all_wrapper_layers):
-            print(" layer_id:", id)
-            for name, wrapper_layer in items:
-                weight_matrix = wrapper_layer.layer.weight.data
-                assert weight_matrix.shape[0] == wrapper_layer.scaler_row.shape[0]
-                avg_activation_matrix = weight_matrix * wrapper_layer.scaler_row    
-                print("  layer_name:", name)
-                print("    avg_activation_matrix:", avg_activation_matrix)
+    def save(self, path):
+        for id, wrapper_layers in enumerate(self.all_wrapper_layers):
+            for name, wrapper_layer in wrapper_layers.items():
+                torch.save(wrapper_layer.scaler_row, path + '/layer_' + str(id) + '_' + name + '.pt')
