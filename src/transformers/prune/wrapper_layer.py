@@ -45,8 +45,8 @@ class WrapperLayer:
     def get_weight_importance(self):
         result = torch.abs(self.layer.weight.data) * torch.sqrt(self.scaler_row.reshape((1,-1)))
         if self.layer_activation != None:
-            return self.layer_activation(result)
-        return result
+            return self.layer_activation(result).half()
+        return result.half()
 
 class BloomWrapperLayer(WrapperLayer):
     def __init__(self, layer, layer_id=0, layer_name="none"):
