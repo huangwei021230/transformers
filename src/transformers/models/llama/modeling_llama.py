@@ -23,6 +23,7 @@ import math
 import warnings
 from typing import List, Optional, Tuple, Union
 
+from transformers.prune import prune_metadata
 import torch
 import torch.nn.functional as F
 import torch.utils.checkpoint
@@ -1135,6 +1136,8 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         self.model = LlamaModel(config)
         self.vocab_size = config.vocab_size
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
+        # The output path is set before initialization function is called
+        self.prune_metadata = prune_metadata.LlamaPruneMetadata(self, ACT2FN[config.hidden_act], self.prune_metadata.output_path)
         if config.record_weight_wise_activation:
             assert self.prune_metadata != None
             self.prune_metadata.register_hooks_for_layers(self.model.layers)

@@ -17,6 +17,7 @@
 import math
 import warnings
 from typing import Optional, Tuple, Union
+from transformers.prune import prune_metadata
 
 import torch
 import torch.utils.checkpoint
@@ -440,6 +441,9 @@ class BloomPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["BloomBlock"]
     _skip_keys_device_placement = "past_key_values"
 
+    def initialize_prune_metadata(self, output_path):
+        self.prune_metadata = prune_metadata.BloomPruneMetadata(self, output_path)
+
     def __init__(self, *inputs, **kwargs):
         super().__init__(*inputs, **kwargs)
 
@@ -594,9 +598,6 @@ class BloomModel(BloomPreTrainedModel):
 
         # Initialize weights and apply final processing
         self.post_init()
-
-        if config.record_weight_wise_activation:
-            self.prune_metadata.register_hooks_for_layers(self.h)
 
     def build_alibi_tensor(self, attention_mask: torch.Tensor, num_heads: int, dtype: torch.dtype) -> torch.Tensor:
         return build_alibi_tensor(attention_mask, num_heads, dtype)
@@ -765,6 +766,8 @@ class BloomForCausalLM(BloomPreTrainedModel):
 
         # Initialize weights and apply final processing
         self.post_init()
+        if config.record_weight_wise_activation:
+            self.prune_metadata.register_hooks_for_layers(self.transformer.h)
 
     def get_output_embeddings(self):
         return self.lm_head
