@@ -766,7 +766,7 @@ class BloomForCausalLM(BloomPreTrainedModel):
 
         # Initialize weights and apply final processing
         self.post_init()
-        self.prune_metadata.instrument_layers(self.transformer.h)
+        self.prune_metadata.set_instrumented_layers(self.transformer.h)
 
     def get_output_embeddings(self):
         return self.lm_head

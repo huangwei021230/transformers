@@ -1323,7 +1323,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
 
     # NOTICE: Default metadata dose not consider activation function, overwrite with model-specific pruning metadata (e.g., to include activation function information)
     def initialize_prune_metadata(self, config):
-        raise RuntimeError("Metadata information not adapted for this model!")
+        pass
 
     def post_init(self):
         """

@@ -1138,7 +1138,7 @@ class LlamaForCausalLM(LlamaPreTrainedModel):
         self.lm_head = nn.Linear(config.hidden_size, config.vocab_size, bias=False)
         # Initialize weights and apply final processing
         self.post_init()
-        self.prune_metadata.instrument_layers(self.model.layers)
+        self.prune_metadata.set_instrumented_layers(self.model.layers)
 
     def initialize_prune_metadata(self, config):
         self.prune_metadata = LlamaPruneMetadata(self, ACT2FN[config.hidden_act], config)

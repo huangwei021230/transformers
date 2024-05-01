@@ -4,6 +4,8 @@ from .sparsity_util import find_layers, PRUNING_FUNC_MAP, RECORDED_TASKS
 import torch
 from torch import nn
 import os
+from transformers.utils import logging
+logger = logging.get_logger(__name__)
 
 # PruneMetadata is used to record the statistics during the forward pass of the model.
 # It can also prune the model based on recorded statistics 
@@ -19,8 +21,15 @@ class PruneMetadata:
         self.pruning_func = PRUNING_FUNC_MAP[config.pruning_strategy]
         self.task_angostic_pruning = config.task_angostic_pruning
         self.record_weight_wise_activation = config.record_weight_wise_activation
+        self.layers = None
+        self.total_num_weights = 0
+        self.num_weights_pruned = 0
+
+    def set_instrumented_layers(self, layers):
+        self.layers = layers
         
     def instrument_layers(self, layers):
+        assert self.layers != None
         for id, layer in enumerate(layers):
             subset = find_layers(layer)
         
@@ -40,12 +49,20 @@ class PruneMetadata:
             for name, wrapper_layer in wrapper_layers.items():
                 module = subset[name]
                 if self.enable_weight_activation_based_pruning:
+                    logger.warn("Pruning weight matrix for {}_{}".format(wrapper_layer.layer_id, name))
                     # prune weight based on recorded activation information
-                    module.weight = nn.Parameter(
-                        self.pruning_func(
-                            module.weight, 
-                            self.load_weight_activations(name), 
-                            self.sparsity_percentage))
+                    pruned_weight, pruned_percentage = self.pruning_func(
+                            module.weight.data, 
+                            self.load_weight_activations(wrapper_layer.layer_id, name), 
+                            self.sparsity_ratio)
+                    logger.warn(f"{pruned_percentage:.2f}" + 
+                                "% of the least important " + 
+                                str(100 * self.sparsity_ratio) + 
+                                "% weights are common among all tasks, and zeroed out.")
+                    num_weights = pruned_weight.view(-1,).shape[0]
+                    self.total_num_weights += num_weights
+                    self.num_weights_pruned += (pruned_percentage / 100 * self.sparsity_ratio * num_weights)
+                    module.weight.data = nn.Parameter(pruned_weight)
                 elif self.record_weight_wise_activation:
                     # record activation information
                     self.handles.append(module\
@@ -54,7 +71,7 @@ class PruneMetadata:
     def create_wrapper_layer(self, layer, layer_id, layer_name):
         return WrapperLayer(layer, layer_id, layer_name)
 
-    def load_weight_activations(self, layer_name):
+    def load_weight_activations(self, layer_id, layer_name):
         activation_infos = []
         # Load the activations from previously recorded files
         if self.task_angostic_pruning:
@@ -66,36 +83,40 @@ class PruneMetadata:
                 activation_infos.append(
                     torch.load(
                         os.path.join(
-                            self.output_path,
                             base_recorded_statistics_folder,
-                            f"{id}_{task}.pt")))
+                            task,
+                            f"{layer_id}_{layer_name}.pt")))
         else:
             activation_infos.append(
                 torch.load(
                     os.path.join(
                         self.output_path, 
-                        f"{id}_{layer_name}.pt")))
+                        f"{layer_id}_{layer_name}.pt")))
         return activation_infos
 
-    def print(self, save_weight_importance=True):
-        print("PruneMetadata")
-        print("all_wrapper_layers:")
-        for id, wrapper_layers in enumerate(self.all_wrapper_layers):
-            print(" layer_id:", id)
-            for name, wrapper_layer in wrapper_layers.items():
-                print("  layer_name:", name)
-                print("    rows:", wrapper_layer.rows)
-                print("    columns:", wrapper_layer.columns)
-                print("    nsamples:", wrapper_layer.nsamples)
-                print("    scaler_row.shape:", wrapper_layer.scaler_row.shape)
-                weight_importance = wrapper_layer.get_weight_importance()
-                print("    weight_importance.shape:", weight_importance.shape)
-                if self.output_path is not None and save_weight_importance:
-                    if not os.path.exists(self.output_path):
-                        os.makedirs(self.output_path)
-                    filename = f"{id}_{name}.pt"
-                    torch.save(weight_importance, os.path.join(self.output_path, filename))
-        
+    def print_statistics(self, save_weight_importance=True):
+        logger.warn("PruneMetadata")
+        logger.warn("For all layers:")
+        if self.record_weight_wise_activation:
+            for id, wrapper_layers in enumerate(self.all_wrapper_layers):
+                logger.warn(" layer_id:", id)
+                for name, wrapper_layer in wrapper_layers.items():
+                    logger.warn("  layer_name:", name)
+                    logger.warn("    rows:", wrapper_layer.rows)
+                    logger.warn("    columns:", wrapper_layer.columns)
+                    logger.warn("    nsamples:", wrapper_layer.nsamples)
+                    logger.warn("    scaler_row.shape:", wrapper_layer.scaler_row.shape)
+                    weight_importance = wrapper_layer.get_weight_importance()
+                    logger.warn("    weight_importance.shape:", weight_importance.shape)
+                    if self.output_path is not None and save_weight_importance:
+                        if not os.path.exists(self.output_path):
+                            os.makedirs(self.output_path)
+                        filename = f"{id}_{name}.pt"
+                        torch.save(weight_importance, os.path.join(self.output_path, filename))
+        if self.enable_weight_activation_based_pruning:
+            logger.warn(f"{(100 * self.num_weights_pruned / self.total_num_weights):.2f}" +
+                        "% weights in the entire model are pruned.")
+
 class BloomPruneMetadata(PruneMetadata):
     def __init__(self, model, config):
         super().__init__(model, config)
