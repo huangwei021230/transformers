@@ -56,14 +56,13 @@ class PruneMetadata:
             for name, wrapper_layer in wrapper_layers.items():
                 if self.enable_weight_wise_pruning:
                     module = subset[name]
-                    filename = f"{id}_{name}.pt"
                     # Load the activations from previously recorded files
-                    activation_info = torch.load(os.path.join(self.output_path, filename))
+                    activation_info = torch.load(os.path.join(self.output_path, f"{id}_{name}.pt"))
                     # prune weight based on recorded activation information
                     module.weight = nn.Parameter(self.pruning_func(module.weight, activation_info, self.sparsity_percentage))
                 else:
                     # record activation information
-                    self.handles.append(subset[name].register_forward_hook(add_batch(id, name, wrapper_layer)))                
+                    self.handles.append(subset[name].register_forward_hook(add_batch(id, name, wrapper_layer)))
 
     def find_instrument_layers(self, layer):
         return find_layers(layer)
