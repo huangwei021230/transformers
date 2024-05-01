@@ -1,5 +1,5 @@
 from .wrapper_layer import WrapperLayer
-from .wrapper_layer import BloomWrapperLayer, LlamaWrapperLayer
+from .wrapper_layer import BloomWrapperLayer, LlamaWrapperLayer, OPTWrapperLayer
 from .sparsity_util import find_layers
 import torch
 import os
@@ -72,3 +72,12 @@ class LlamaPruneMetadata(PruneMetadata):
         
     def create_wrapper_layer(self, layer, layer_id, layer_name):
         return LlamaWrapperLayer(layer, layer_id, layer_name, self.activation_func)
+
+class OPTPruneMetadata(PruneMetadata):
+    def __init__(self, model, activation_func, output_path):
+        super().__init__(model, output_path)
+        self.output_path = output_path
+        self.activation_func = activation_func
+
+    def create_wrapper_layer(self, layer, layer_id, layer_name):
+        return OPTWrapperLayer(layer, layer_id, layer_name, self.activation_func)

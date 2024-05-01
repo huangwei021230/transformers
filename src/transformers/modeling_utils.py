@@ -1322,7 +1322,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
         if config.record_weight_wise_activation:
             self.initialize_prune_metadata(config.output_path)
 
-    # NOTICE: Default metadata dose not consider activation function, overwrite with model-specific pruning metadata (e.g., to include activation function information)
+    # NOTICE: Default metadata does not consider activation function, overwrite with model-specific pruning metadata (e.g., to include activation function information)
     def initialize_prune_metadata(self, output_path):
         self.prune_metadata = prune_metadata.PruneMetadata(self, output_path)
 

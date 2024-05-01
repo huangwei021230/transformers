@@ -61,3 +61,8 @@ class LlamaWrapperLayer(WrapperLayer):
         # TODO: inject activation function for specific layers
         if layer_name == 'mlp.gate_proj':
             self.layer_activation = activation_func
+
+class OPTWrapperLayer(WrapperLayer):
+    def __init__(self, layer, layer_id=0, layer_name="none", activation_func=None):
+        super().__init__(layer, layer_id, layer_name)
+        self.layer_activation = activation_func
