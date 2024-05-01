@@ -1,7 +1,9 @@
 import json
 import numpy as np
 import torch
-from torch import nn 
+from torch import nn
+from transformers.utils import logging
+logger = logging.get_logger(__name__)
 
 # TOOD: The code is reused from the clip benchmark, we need to refactor the code to make it as a dependened package
 def sparsify_matrix_for_FC_layer(hidden_states, sparsity_percentage, dim_of_neurals, enable_random_sparsity_selection=False):
@@ -58,3 +60,37 @@ def find_layers(module, layers=[nn.Linear], name=''):
             child, layers=layers, name=name + '.' + name1 if name != '' else name1
         ))
     return res
+
+
+def prune_by_weight_importances(
+        weight: torch.tensor,
+        weight_importances: list[torch.tensor],
+        pruning_percentage) -> torch.tensor:
+    with torch.no_grad():
+        original_size = weight.size()
+        # flatten the weight mask/weight_importance matrix for easier processing
+        weight = weight.view(-1,)
+        mask = torch.ones_like(weight)
+        for weight_importance in weight_importances:
+            weight_importance = weight_importance.view(-1,)
+            topk = int((1 - pruning_percentage) * weight_importance.shape[0])
+            preserved_indices = weight_importance.topk(topk).indices
+            mask *= torch.zeros_like(weight).scatter(0, preserved_indices, 1).bool().half()
+        
+        return (weight * mask).view(original_size), 100 * (mask.bool().sum().cpu().item()) / topk
+
+
+def prune_by_column_importances(
+        weight: torch.tensor, 
+        weight_importances: torch.tensor,
+        pruning_percentage,
+        reverse_order=False) -> torch.tensor:
+    pass
+
+
+PRUNING_FUNC_MAP = {
+    'weight': prune_by_weight_importances,
+    'column': prune_by_column_importances
+}
+task_names = ['copa', 'lambada_openai', 'piqa', 'mmlu', 'gsm8k', 'arc_challenge']
+RECORDED_TASKS = task_names

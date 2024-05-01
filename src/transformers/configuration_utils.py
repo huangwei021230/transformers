@@ -376,6 +376,11 @@ class PretrainedConfig(PushToHubMixin):
             
         self.record_weight_wise_activation = kwargs.pop("record_weight_wise_activation", False)
         self.output_path = kwargs.pop("output_path", None)
+        self.enable_weight_activation_based_pruning = kwargs.pop("enable_weight_activation_based_pruning", True)
+        self.pruning_strategy = kwargs.pop("pruning_strategy", "weight")
+        self.sparsity_ratio = kwargs.pop("sparsity_ratio", 1.0)
+        self.task_angostic_pruning = kwargs.pop("task_angostic_pruning", False)
+
     @property
     def name_or_path(self) -> str:
         return getattr(self, "_name_or_path", None)

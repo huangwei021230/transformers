@@ -1318,9 +1318,8 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
         # `InstructBlipForConditionalGeneration` can dynamically update it without modifying the class attribute
         # when a different component (e.g. language_model) is used.
         self._keep_in_fp32_modules = copy.copy(self.__class__._keep_in_fp32_modules)
-        
-        if config.record_weight_wise_activation:
-            self.initialize_prune_metadata(config.output_path)
+
+        self.initialize_prune_metadata(config)
 
     # NOTICE: Default metadata does not consider activation function, overwrite with model-specific pruning metadata (e.g., to include activation function information)
     def initialize_prune_metadata(self, output_path):

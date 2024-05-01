@@ -17,7 +17,7 @@
 import math
 import warnings
 from typing import Optional, Tuple, Union
-from transformers.prune import prune_metadata
+from transformers.prune.prune_metadata import BloomPruneMetadata
 
 import torch
 import torch.utils.checkpoint
@@ -441,8 +441,8 @@ class BloomPreTrainedModel(PreTrainedModel):
     _no_split_modules = ["BloomBlock"]
     _skip_keys_device_placement = "past_key_values"
 
-    def initialize_prune_metadata(self, output_path):
-        self.prune_metadata = prune_metadata.BloomPruneMetadata(self, output_path)
+    def initialize_prune_metadata(self, config):
+        self.prune_metadata = BloomPruneMetadata(self, config)
 
     def __init__(self, *inputs, **kwargs):
         super().__init__(*inputs, **kwargs)
@@ -766,8 +766,7 @@ class BloomForCausalLM(BloomPreTrainedModel):
 
         # Initialize weights and apply final processing
         self.post_init()
-        if config.record_weight_wise_activation:
-            self.prune_metadata.register_hooks_for_layers(self.transformer.h)
+        self.prune_metadata.set_instrumented_layers(self.transformer.h)
 
     def get_output_embeddings(self):
         return self.lm_head
