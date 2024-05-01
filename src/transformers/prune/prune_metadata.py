@@ -8,20 +8,21 @@ import os
 # PruneMetadata is used to record the statistics during the forward pass of the model.
 # It can also prune the model based on recorded statistics 
 class PruneMetadata:
-    def __init__(self, model, output_path=None, enable_weight_wise_pruning=True, pruning_strategy='weight', sparsity_ratio=1.0, task_angostic_pruning=False):
+    def __init__(self, model, config):
         self.all_wrapper_layers = []
         self.handles = []
         self.model = model
-        self.output_path = output_path
-        self.enable_weight_wise_pruning = enable_weight_wise_pruning
-        self.sparsity_ratio = sparsity_ratio
-        assert pruning_strategy in PRUNING_FUNC_MAP
-        self.pruning_func = PRUNING_FUNC_MAP[pruning_strategy]
-        self.task_angostic_pruning = task_angostic_pruning
-
-    def register_hooks_for_layers(self, layers):
+        self.output_path = config.output_path
+        self.enable_weight_wise_pruning = config.enable_weight_wise_pruning
+        self.sparsity_ratio = config.sparsity_ratio
+        assert config.pruning_strategy in PRUNING_FUNC_MAP
+        self.pruning_func = PRUNING_FUNC_MAP[config.pruning_strategy]
+        self.task_angostic_pruning = config.task_angostic_pruning
+        self.record_weight_wise_activation = config.record_weight_wise_activation
+        
+    def instrument_layers(self, layers):
         for id, layer in enumerate(layers):
-            subset = self.find_instrument_layers(layer)
+            subset = find_layers(layer)
         
             # Wrapper layer is used to record the statistics of each layer
             wrapper_layers = {}
@@ -62,14 +63,11 @@ class PruneMetadata:
                     # prune weight based on recorded activation information
                     module.weight = nn.Parameter(
                         self.pruning_func(module.weight, activation_infos, self.sparsity_percentage))
-                else:
+                elif self.record_weight_wise_activation:
                     # record activation information
                     self.handles.append(subset[name]\
                         .register_forward_hook(add_batch(id, name, wrapper_layer)))
 
-    def find_instrument_layers(self, layer):
-        return find_layers(layer)
-    
     def create_wrapper_layer(self, layer, layer_id, layer_name):
         return WrapperLayer(layer, layer_id, layer_name)
 
@@ -93,16 +91,15 @@ class PruneMetadata:
                     torch.save(weight_importance, os.path.join(self.output_path, filename))
         
 class BloomPruneMetadata(PruneMetadata):
-    def __init__(self, model, output_path):
-        super().__init__(model, output_path)
-        self.output_path = output_path
+    def __init__(self, model, config):
+        super().__init__(model, config)
         
     def create_wrapper_layer(self, layer, layer_id, layer_name):
         return BloomWrapperLayer(layer, layer_id, layer_name)
-    
+
 class LlamaPruneMetadata(PruneMetadata):
-    def __init__(self, model, activation_func, output_path):
-        super().__init__(model, output_path)
+    def __init__(self, model, activation_func, config):
+        super().__init__(model, config)
         self.activation_func = activation_func
         
     def create_wrapper_layer(self, layer, layer_id, layer_name):
