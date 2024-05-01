@@ -45,18 +45,27 @@ class PruneMetadata:
                         # Load all previously recorded activation infomation, only prune those that does not significantly effect all tasks.
                         # NOTICE: change the `RECORDED_TASKS` based on what have recorded
                         # We assume all recorded statistics are orginized in the same folder
-                        base_recorded_statistics_folder = self.output_path[:self.output_path.rfind('/')]
+                        base_recorded_statistics_folder = self.output_path[:self.output_path.rfind(os.path.sep)]
                         for task in RECORDED_TASKS:
-                            activation_info = torch.load(os.path.join(os.path.join(self.output_path, base_recorded_statistics_folder), f"{id}_{task}.pt"))
-                            activation_infos.append(activation_info)
+                            activation_infos.append(
+                                torch.load(
+                                    os.path.join(
+                                        self.output_path,
+                                        base_recorded_statistics_folder,
+                                        f"{id}_{task}.pt")))
                     else:
-                        activation_info = torch.load(os.path.join(self.output_path, f"{id}_{name}.pt"))
-                        activation_infos.append(activation_info)
+                        activation_infos.append(
+                            torch.load(
+                                os.path.join(
+                                    self.output_path, 
+                                    f"{id}_{name}.pt")))
                     # prune weight based on recorded activation information
-                    module.weight = nn.Parameter(self.pruning_func(module.weight, activation_infos, self.sparsity_percentage))
+                    module.weight = nn.Parameter(
+                        self.pruning_func(module.weight, activation_infos, self.sparsity_percentage))
                 else:
                     # record activation information
-                    self.handles.append(subset[name].register_forward_hook(add_batch(id, name, wrapper_layer)))
+                    self.handles.append(subset[name]\
+                        .register_forward_hook(add_batch(id, name, wrapper_layer)))
 
     def find_instrument_layers(self, layer):
         return find_layers(layer)
@@ -83,7 +92,6 @@ class PruneMetadata:
                     filename = f"{id}_{name}.pt"
                     torch.save(weight_importance, os.path.join(self.output_path, filename))
         
-# TODO: implement this
 class BloomPruneMetadata(PruneMetadata):
     def __init__(self, model, output_path):
         super().__init__(model, output_path)
