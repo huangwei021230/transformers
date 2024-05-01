@@ -13,7 +13,7 @@ class PruneMetadata:
         self.handles = []
         self.model = model
         self.output_path = config.output_path
-        self.enable_weight_wise_pruning = config.enable_weight_wise_pruning
+        self.enable_weight_activation_based_pruning = config.enable_weight_activation_based_pruning
         self.sparsity_ratio = config.sparsity_ratio
         assert config.pruning_strategy in PRUNING_FUNC_MAP
         self.pruning_func = PRUNING_FUNC_MAP[config.pruning_strategy]
@@ -38,38 +38,44 @@ class PruneMetadata:
                 return tmp
 
             for name, wrapper_layer in wrapper_layers.items():
-                if self.enable_weight_wise_pruning:
-                    module = subset[name]
-                    activation_infos = []
-                    # Load the activations from previously recorded files
-                    if self.task_angostic_pruning:
-                        # Load all previously recorded activation infomation, only prune those that does not significantly effect all tasks.
-                        # NOTICE: change the `RECORDED_TASKS` based on what have recorded
-                        # We assume all recorded statistics are orginized in the same folder
-                        base_recorded_statistics_folder = self.output_path[:self.output_path.rfind(os.path.sep)]
-                        for task in RECORDED_TASKS:
-                            activation_infos.append(
-                                torch.load(
-                                    os.path.join(
-                                        self.output_path,
-                                        base_recorded_statistics_folder,
-                                        f"{id}_{task}.pt")))
-                    else:
-                        activation_infos.append(
-                            torch.load(
-                                os.path.join(
-                                    self.output_path, 
-                                    f"{id}_{name}.pt")))
+                module = subset[name]
+                if self.enable_weight_activation_based_pruning:
                     # prune weight based on recorded activation information
                     module.weight = nn.Parameter(
-                        self.pruning_func(module.weight, activation_infos, self.sparsity_percentage))
+                        self.pruning_func(
+                            module.weight, 
+                            self.load_weight_activations(name), 
+                            self.sparsity_percentage))
                 elif self.record_weight_wise_activation:
                     # record activation information
-                    self.handles.append(subset[name]\
+                    self.handles.append(module\
                         .register_forward_hook(add_batch(id, name, wrapper_layer)))
 
     def create_wrapper_layer(self, layer, layer_id, layer_name):
         return WrapperLayer(layer, layer_id, layer_name)
+
+    def load_weight_activations(self, layer_name):
+        activation_infos = []
+        # Load the activations from previously recorded files
+        if self.task_angostic_pruning:
+            # Load all previously recorded activation infomation, only prune those that does not significantly effect all tasks.
+            # NOTICE: change the `RECORDED_TASKS` based on what have recorded
+            # We assume all recorded statistics are orginized in the same folder
+            base_recorded_statistics_folder = self.output_path[:self.output_path.rfind(os.path.sep)]
+            for task in RECORDED_TASKS:
+                activation_infos.append(
+                    torch.load(
+                        os.path.join(
+                            self.output_path,
+                            base_recorded_statistics_folder,
+                            f"{id}_{task}.pt")))
+        else:
+            activation_infos.append(
+                torch.load(
+                    os.path.join(
+                        self.output_path, 
+                        f"{id}_{layer_name}.pt")))
+        return activation_infos
 
     def print(self, save_weight_importance=True):
         print("PruneMetadata")
