@@ -58,3 +58,37 @@ def find_layers(module, layers=[nn.Linear], name=''):
             child, layers=layers, name=name + '.' + name1 if name != '' else name1
         ))
     return res
+
+
+def prune_by_weight_importances(
+        weight: torch.tensor,
+        weight_importances: list[torch.tensor],
+        pruning_percentage,
+        layer_wise_weight_selection=False,
+        reverse_order=False) -> torch.tensor:
+    original_size = weight.size()
+    # flatten the weight mask/weight_importance matrix for easier processing
+    weight = weight.view(-1,)
+    mask = torch.ones_like(weight)
+    for weight_importance in weight_importances:
+        weight_importance = weight_importance.view(-1,)
+        topk = int(pruning_percentage * weight_importance.shape[0])
+        preserved_indices = weight_importance.topk(topk, largest=not reverse_order).indices
+        mask *= torch.zeros_like(weight).scatter(0, preserved_indices, 1).bool().half()
+    return (weight * mask).view(original_size)
+
+
+def prune_by_column_importances(
+        weight: torch.tensor, 
+        weight_importances: torch.tensor,
+        pruning_percentage,
+        reverse_order=False) -> torch.tensor:
+    pass
+
+
+PRUNING_FUNC_MAP = {
+    'weight', prune_by_weight_importances,
+    'column', prune_by_column_importances
+}
+
+RECORDED_TASKS = []
