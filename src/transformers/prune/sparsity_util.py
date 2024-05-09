@@ -3,6 +3,7 @@ import numpy as np
 import torch
 from torch import nn
 from transformers.utils import logging
+from typing import List, Union
 logger = logging.get_logger(__name__)
 
 # TOOD: The code is reused from the clip benchmark, we need to refactor the code to make it as a dependened package
@@ -64,8 +65,8 @@ def find_layers(module, layers=[nn.Linear], name=''):
 
 def prune_by_weight_importances(
         weight: torch.tensor,
-        weight_importances: list[torch.tensor],
-        pruning_percentage) -> torch.tensor:
+        weight_importances: List[torch.tensor],
+        pruning_percentage: Union[float, int]) -> torch.tensor:
     with torch.no_grad():
         original_size = weight.size()
         # flatten the weight mask/weight_importance matrix for easier processing

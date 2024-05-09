@@ -133,9 +133,8 @@ class LlamaPruneMetadata(PruneMetadata):
         return LlamaWrapperLayer(layer, layer_id, layer_name, self.activation_func)
 
 class OPTPruneMetadata(PruneMetadata):
-    def __init__(self, model, activation_func, output_path):
-        super().__init__(model, output_path)
-        self.output_path = output_path
+    def __init__(self, model, activation_func, config):
+        super().__init__(model, config)
         self.activation_func = activation_func
 
     def create_wrapper_layer(self, layer, layer_id, layer_name):
