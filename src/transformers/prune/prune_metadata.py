@@ -24,6 +24,7 @@ class PruneMetadata:
         self.layers = None
         self.total_num_weights = 0
         self.num_weights_pruned = 0
+        self.analyze_layer_norm_affect = config.analyze_layer_norm_affect
 
     def set_instrumented_layers(self, layers):
         self.layers = layers
@@ -31,7 +32,11 @@ class PruneMetadata:
     def instrument_layers(self, layers):
         assert self.layers != None
         for id, layer in enumerate(layers):
-            subset = find_layers(layer)
+            if self.analyze_layer_norm_affect:
+                from transformers.models.llama.modeling_llama import LlamaRMSNorm
+                subset = find_layers(layer, layers=[LlamaRMSNorm])
+            else:
+                subset = find_layers(layer)
         
             # Wrapper layer is used to record the statistics of each layer
             wrapper_layers = {}
@@ -39,13 +44,6 @@ class PruneMetadata:
                 wrapper_layers[name] = self.create_wrapper_layer(subset[name], layer_id=id, layer_name=name)
             self.all_wrapper_layers.append(wrapper_layers)
             
-            def add_batch(layer_id, name, wrapper_layer):
-                def tmp(_, inputs, output):
-                    # print('[DEBUG-0]layer_id:{}, layer_name:{}'.format(layer_id, name))
-                    wrapper_layer.add_batch(inputs[0].data, output.data)
-                    # print('[DEBUG-1]layer_id:{}, layer_name:{}'.format(layer_id, name))
-                return tmp
-
             for name, wrapper_layer in wrapper_layers.items():
                 module = subset[name]
                 if self.enable_weight_activation_based_pruning:
@@ -65,8 +63,24 @@ class PruneMetadata:
                     module.weight.data = nn.Parameter(pruned_weight)
                 elif self.record_weight_wise_activation:
                     # record activation information
+                    def add_batch(layer_id, name, wrapper_layer):
+                        def tmp(_, inputs, output):
+                            # print('[DEBUG-0]layer_id:{}, layer_name:{}'.format(layer_id, name))
+                            wrapper_layer.add_batch(inputs[0].data, output.data)
+                            # print('[DEBUG-1]layer_id:{}, layer_name:{}'.format(layer_id, name))
+                        return tmp
                     self.handles.append(module\
                         .register_forward_hook(add_batch(id, name, wrapper_layer)))
+                elif self.analyze_layer_norm_affect:
+                    def record_in_out(layer_id, name, wrapper_layer):
+                        def tmp(_, inputs, output):
+                            # print('[DEBUG-0]layer_id:{}, layer_name:{}'.format(layer_id, name))
+                            wrapper_layer.record_in_out(inputs[0].data, output.data)
+                            # print('[DEBUG-1]layer_id:{}, layer_name:{}'.format(layer_id, name))
+                        return tmp
+                    self.handles.append(module.register_forward_hook(
+                        record_in_out(id, name, wrapper_layer)
+                    ))
 
     def create_wrapper_layer(self, layer, layer_id, layer_name):
         return WrapperLayer(layer, layer_id, layer_name)
@@ -97,11 +111,16 @@ class PruneMetadata:
     def print_statistics(self, save_weight_importance=True):
         logger.warn("PruneMetadata")
         logger.warn("For all layers:")
-        if self.record_weight_wise_activation:
+        if self.record_weight_wise_activation or self.analyze_layer_norm_affect:
             for id, wrapper_layers in enumerate(self.all_wrapper_layers):
-                logger.warn(" layer_id:", id)
+                logger.warn(f" layer_id:{id}")
                 for name, wrapper_layer in wrapper_layers.items():
-                    logger.warn("  layer_name:", name)
+                    logger.warn(f"  layer_name:{name}")
+                    if self.analyze_layer_norm_affect:
+                        numbers = wrapper_layer.sims
+                        average = sum(numbers) / len(numbers)
+                        logger.warn(f"    average cosine sim of layer norm: {average.item()}")
+                        continue
                     logger.warn("    rows:", wrapper_layer.rows)
                     logger.warn("    columns:", wrapper_layer.columns)
                     logger.warn("    nsamples:", wrapper_layer.nsamples)

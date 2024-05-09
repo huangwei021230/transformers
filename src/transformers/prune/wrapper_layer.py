@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-
+import torch.nn.functional as F
 # Define WrapperLayer class
 class WrapperLayer:
     """
@@ -12,7 +12,7 @@ class WrapperLayer:
         self.layer = layer
         self.dev = self.layer.weight.device
         self.rows = layer.weight.data.shape[0]
-        self.columns = layer.weight.data.shape[1]
+        self.columns = layer.weight.data.shape[1] if len(layer.weight.data.shape) > 1 else None
 
         # number of features of the input=self.columns
         self.scaler_row = None
@@ -21,6 +21,11 @@ class WrapperLayer:
         self.layer_id = layer_id 
         self.layer_name = layer_name
         self.layer_activation = None
+        self.sims = []
+        
+    def record_in_out(self, input_X: torch.Tensor, output_X: torch.Tensor):
+        assert input_X.shape == output_X.shape
+        self.sims.append(F.cosine_similarity(input_X, output_X).mean())
 
     def add_batch(self, input_X: torch.Tensor, output_X: torch.Tensor):
         if self.scaler_row is None:
