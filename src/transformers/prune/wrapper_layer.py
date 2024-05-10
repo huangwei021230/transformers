@@ -70,4 +70,5 @@ class LlamaWrapperLayer(WrapperLayer):
 class OPTWrapperLayer(WrapperLayer):
     def __init__(self, layer, layer_id=0, layer_name="none", activation_func=None):
         super().__init__(layer, layer_id, layer_name)
-        self.layer_activation = activation_func
+        if layer_name == "mlp.fc1":
+            self.layer_activation = activation_func

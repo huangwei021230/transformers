@@ -17,6 +17,7 @@ class PruneMetadata:
         self.output_path = config.output_path
         self.enable_weight_activation_based_pruning = config.enable_weight_activation_based_pruning
         self.sparsity_ratio = config.sparsity_ratio
+        self.target_model = config.target_model
         assert config.pruning_strategy in PRUNING_FUNC_MAP
         self.pruning_func = PRUNING_FUNC_MAP[config.pruning_strategy]
         self.task_angostic_pruning = config.task_angostic_pruning
@@ -33,8 +34,11 @@ class PruneMetadata:
         assert self.layers != None
         for id, layer in enumerate(layers):
             if self.analyze_layer_norm_affect:
-                from transformers.models.llama.modeling_llama import LlamaRMSNorm
-                subset = find_layers(layer, layers=[LlamaRMSNorm])
+                if self.target_model == "llama":
+                    from transformers.models.llama.modeling_llama import LlamaRMSNorm
+                    subset = find_layers(layer, layers=[LlamaRMSNorm])
+                elif self.target_model == "opt":
+                    subset = find_layers(layer, layers=[nn.LayerNorm])
             else:
                 subset = find_layers(layer)
         
