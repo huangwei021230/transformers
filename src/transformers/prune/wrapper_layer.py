@@ -27,19 +27,17 @@ class WrapperLayer:
     def record_in_out(self, input_X: torch.Tensor, output_X: torch.Tensor):
         assert input_X.shape == output_X.shape
         
-        input_X = input_X.to(output_X.device)
         input_X = input_X.float()
         output_X = output_X.float()
 
-        # Check for zero vectors in input_X and output_X
-        input_zero_mask = input_X.norm(dim=1) == 0
-        output_zero_mask = output_X.norm(dim=1) == 0
-        zero_mask = input_zero_mask | output_zero_mask
+        # # Check for zero vectors in input_X and output_X
+        # input_zero_mask = input_X.norm(dim=1) == 0
+        # output_zero_mask = output_X.norm(dim=1) == 0
+        # zero_mask = input_zero_mask | output_zero_mask
 
-        if zero_mask.any():
-            print("Zero vector detected, skipping those instances.")
+        # if zero_mask.any():
+        #     print("Zero vector detected, skipping those instances.")
 
-        
         epsilon = 1e-8
         input_X += epsilon
         output_X += epsilon
