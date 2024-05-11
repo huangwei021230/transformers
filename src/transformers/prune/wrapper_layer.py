@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+import math
 # Define WrapperLayer class
 class WrapperLayer:
     """
@@ -25,7 +26,30 @@ class WrapperLayer:
         
     def record_in_out(self, input_X: torch.Tensor, output_X: torch.Tensor):
         assert input_X.shape == output_X.shape
-        self.sims.append(F.cosine_similarity(input_X, output_X).mean())
+        
+        input_X = input_X.to(output_X.device)
+        input_X = input_X.float()
+        output_X = output_X.float()
+
+        # Check for zero vectors in input_X and output_X
+        input_zero_mask = input_X.norm(dim=1) == 0
+        output_zero_mask = output_X.norm(dim=1) == 0
+        zero_mask = input_zero_mask | output_zero_mask
+
+        if zero_mask.any():
+            print("Zero vector detected, skipping those instances.")
+
+        
+        epsilon = 1e-8
+        input_X += epsilon
+        output_X += epsilon
+
+        cosine_sim = F.cosine_similarity(input_X, output_X, dim=1).mean()
+
+        if not math.isnan(cosine_sim):
+            self.sims.append(cosine_sim)
+        else:
+            print("Still receiving NaN after adjustments.")
 
     def add_batch(self, input_X: torch.Tensor, output_X: torch.Tensor):
         if self.scaler_row is None:

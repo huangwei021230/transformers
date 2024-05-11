@@ -73,7 +73,7 @@ class PruneMetadata:
                             wrapper_layer.add_batch(inputs[0].data, output.data)
                             # print('[DEBUG-1]layer_id:{}, layer_name:{}'.format(layer_id, name))
                         return tmp
-                    self.handles.append(module\
+                    self.handles.append(module
                         .register_forward_hook(add_batch(id, name, wrapper_layer)))
                 elif self.analyze_layer_norm_affect:
                     def record_in_out(layer_id, name, wrapper_layer):
@@ -121,6 +121,8 @@ class PruneMetadata:
                 for name, wrapper_layer in wrapper_layers.items():
                     logger.warn(f"  layer_name:{name}")
                     if self.analyze_layer_norm_affect:
+                        print('[DEBUG-0]layer_id:{}, layer_name:{}'.format(wrapper_layer.layer_id, wrapper_layer.layer_name))
+                        print("[DEBUG-0]wrapper_layer.sims: ", len(wrapper_layer.sims))
                         numbers = wrapper_layer.sims
                         average = sum(numbers) / len(numbers)
                         logger.warn(f"    average cosine sim of layer norm: {average.item()}")
